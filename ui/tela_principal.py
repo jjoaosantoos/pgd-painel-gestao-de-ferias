@@ -160,7 +160,7 @@ class TelaPrincipal(QWidget):
         aba_nova = QWidget()
         layout_aba_nova = QVBoxLayout(aba_nova)
 
-        label_em_branco = QLabel("em preparo")
+        label_em_branco = QLabel("Em preparo...")
         label_em_branco.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout_aba_nova.addWidget(label_em_branco)
 

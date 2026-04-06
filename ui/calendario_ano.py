@@ -14,7 +14,7 @@ from PyQt6.QtWidgets import (
     QFrame,
 )
 from PyQt6.QtCore import Qt, pyqtSignal, QTimer
-from PyQt6.QtGui import QFont
+from PyQt6.QtGui import QFont, QColor
 from PyQt6.QtWidgets import QAbstractItemView
 
 from pathlib import Path
@@ -203,12 +203,27 @@ class CalendarioAno(QWidget):
         self.row_por_nome.clear()
 
         # Inserir nomes na tabela de nomes || Coloca cada nome em uma linha || Guarda o mapeamento nome -> Linha
-        for i, pessoa in enumerate(self.dados):
-            nome_completo = f"{pessoa.get('nome')} ({pessoa.get('matricula')})"
+        for row_index, pessoa in enumerate(self.dados):
+            nome = pessoa.get("nome", "Vazio")
+            matricula = pessoa.get("matricula", "Vazio")
+            afastado = pessoa.get("afastado", False)
+
+            if afastado:
+                nome_completo = f"** {nome} ({matricula})".strip()
+            else:
+                nome_completo = f"{nome} ({matricula})".strip()
+
             item = QTableWidgetItem(nome_completo)
+
+            if afastado:
+                item.setForeground(QColor("red"))
+
             item.setFlags(Qt.ItemFlag.ItemIsEnabled)
-            self.table_nomes.setItem(i, 0, item)
-            self.table_nomes.setRowHeight(i, 30)
+
+            linha = row_index
+            self.table_nomes.setItem(linha, 0, item)
+            self.table_nomes.setRowHeight(linha, 30)
+            self.row_por_nome[nome_completo] = [linha]
 
         # --- Cabeçalho (meses + dias) ---
         self.widget_cabecalho = QWidget()

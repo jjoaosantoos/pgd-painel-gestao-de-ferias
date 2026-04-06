@@ -16,6 +16,13 @@ def coletar_dados(navegador):
         except NoSuchElementException:
             nome = None
         try:
+            indicador_afastado = linha.find_element(
+                By.XPATH, './/td[contains(@class, "views-field-views-conditional")]'
+            ).text.strip()
+        except NoSuchElementException:
+            indicador_afastado = ""
+        afastado = indicador_afastado == "**"
+        try:
             matricula = linha.find_element(
                 By.XPATH, './/td[contains(@class, "views-field-field-matricula-sgpe")]'
             ).text
@@ -46,6 +53,7 @@ def coletar_dados(navegador):
             dados.append(
                 {
                     "nome": nome,
+                    "afastado": afastado,
                     "matricula": matricula,
                     "funcao": funcao,
                     "email": email,
