@@ -6,7 +6,8 @@ from PyQt6.QtWidgets import (
     QPushButton,
     QHBoxLayout,
     QLabel,
-    QApplication
+    QApplication,
+    QTabWidget
 )
 from PyQt6.QtCore import Qt, QTimer
 
@@ -123,28 +124,54 @@ class TelaPrincipal(QWidget):
         self.btn_consultar.clicked.connect(self.on_consultar_click)
         btn_exportar.clicked.connect(self.on_exportar_click)
 
-        layout_geral = QVBoxLayout(self)
+        # Layout principal da janela
+        layout_principal = QVBoxLayout(self)
 
-        # ===== TOPO DA TELA =====
+        # Cria o componente de abas
+        self.tabs = QTabWidget()
 
-        # 1. Layout dos botões (lado esquerdo)
+        # ABA 1 - PAINEL PRINCIPAL
+        
+        aba_painel = QWidget()
+        layout_aba_painel = QVBoxLayout(aba_painel)
+
+        # Layout dos botões
         layout_botoes = QHBoxLayout()
         layout_botoes.addWidget(btn_salvar)
         layout_botoes.addWidget(self.btn_consultar)
         layout_botoes.addWidget(btn_exportar)
 
-        # 3. Layout principal do topo
+        # Layout do topo
         layout_topo = QHBoxLayout()
         layout_topo.addLayout(layout_botoes)
         layout_topo.addStretch()
         layout_topo.addStretch()
 
-        # 4. Adiciona o topo ao layout geral
-        layout_geral.addLayout(layout_topo)
+        # Adiciona topo na aba principal
+        layout_aba_painel.addLayout(layout_topo)
 
+        # Adiciona os calendários na aba principal
         for calendario in self.calendarios.values():
-            layout_geral.addWidget(calendario)
-        self.setLayout(layout_geral)
+            layout_aba_painel.addWidget(calendario)
+
+        
+        # ABA 2 - EM BRANCO
+        
+        aba_nova = QWidget()
+        layout_aba_nova = QVBoxLayout(aba_nova)
+
+        label_em_branco = QLabel("em preparo")
+        label_em_branco.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout_aba_nova.addWidget(label_em_branco)
+
+        # Adiciona as abas no QTabWidget
+        self.tabs.addTab(aba_painel, "Painel")
+        self.tabs.addTab(aba_nova, "Nova Aba")
+
+        # Adiciona o QTabWidget na janela principal
+        layout_principal.addWidget(self.tabs)
+
+        self.setLayout(layout_principal)
 
         # Define cor inicial do botão Consultar
         resultado = buscar_dados_atuais(self.sigla)
