@@ -6,6 +6,7 @@ from PyQt6.QtWidgets import (
     QPushButton,
     QHBoxLayout,
     QLabel,
+    QApplication
 )
 from PyQt6.QtCore import Qt, QTimer
 
@@ -205,7 +206,12 @@ class TelaPrincipal(QWidget):
             QMessageBox.warning(self, "Aviso", "Não há dados para salvar.")
             return
 
+        cursor_ativo = False
+
         try:
+            QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
+            cursor_ativo = True
+
             # 0) Dados que o usuário quer salvar (da tela)
             dados_para_salvar = self._filtrar_dados_sigla(self.dados_salvos)
 
@@ -216,6 +222,11 @@ class TelaPrincipal(QWidget):
 
             # 2) Se for igual, não cria versão nova
             if self._normalizar_registros(dados_para_salvar) == self._normalizar_registros(dados_banco):
+                self.atualizar_status_consultar(False)
+
+                QApplication.restoreOverrideCursor()
+                cursor_ativo = False
+
                 QMessageBox.information(
                     self,
                     "Nada para salvar",
@@ -223,7 +234,6 @@ class TelaPrincipal(QWidget):
                     f"A área {self.sigla} já está sincronizada com o banco."
                     + (f"\nVersão atual: {versao_banco}" if versao_banco is not None else "")
                 )
-                self.atualizar_status_consultar(False)
                 return
 
             # 3) Se mudou, salva no banco (gera NOVA versão)
@@ -248,6 +258,9 @@ class TelaPrincipal(QWidget):
             self.dados_salvos = dados_para_salvar
             self.atualizar_status_consultar(False)
 
+            QApplication.restoreOverrideCursor()
+            cursor_ativo = False
+
             QMessageBox.information(
                 self,
                 "Sucesso",
@@ -255,7 +268,15 @@ class TelaPrincipal(QWidget):
             )
 
         except Exception as e:
+            if cursor_ativo:
+                QApplication.restoreOverrideCursor()
+                cursor_ativo = False
+
             QMessageBox.critical(self, "Erro ao salvar", str(e))
+
+        finally:
+            if cursor_ativo:
+                QApplication.restoreOverrideCursor()
 
 
     def _normalizar_registros(self, registros: list[dict]) -> list[dict]:
@@ -287,12 +308,20 @@ class TelaPrincipal(QWidget):
 
 
     def on_consultar_click(self):
+        cursor_ativo = False
+
         try:
+            QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
+            cursor_ativo = True
+
             # Busca a última versão no banco
             resultado = buscar_dados_atuais(self.sigla)
 
             if not resultado:
                 self.atualizar_status_consultar(False)
+
+                QApplication.restoreOverrideCursor()
+                cursor_ativo = False
 
                 QMessageBox.information(
                     self,
@@ -314,7 +343,7 @@ class TelaPrincipal(QWidget):
 
             # Atualiza JSON local para refletir o banco
             json_versionado = {"versao": versao, "sigla": self.sigla, "dados": dados_bd}
-            salvar_dados(json_versionado, self.sigla)  # padrão, não pergunta pasta
+            salvar_dados(json_versionado, self.sigla)
 
             # Atualiza título da janela
             self.atualizar_titulo_janela()
@@ -336,6 +365,9 @@ class TelaPrincipal(QWidget):
                 calendario.atualizar_dados(dados_bd)
                 calendario.limpar_filtro()
 
+            QApplication.restoreOverrideCursor()
+            cursor_ativo = False
+
             QMessageBox.information(
                 self,
                 "Consulta",
@@ -343,7 +375,15 @@ class TelaPrincipal(QWidget):
             )
 
         except Exception as e:
+            if cursor_ativo:
+                QApplication.restoreOverrideCursor()
+                cursor_ativo = False
+
             QMessageBox.critical(self, "Erro na consulta", str(e))
+
+        finally:
+            if cursor_ativo:
+                QApplication.restoreOverrideCursor()
 
     def _exportar_csv_do_ano_atual(self):
         ano = self.ano_atual
