@@ -38,15 +38,24 @@ class TelaPrincipal(QWidget):
         else:
             self.versao_atual = "N/A"
 
-        self.atualizar_titulo_janela()
-
         self.setGeometry(100, 100, 1600, 700)
 
         self.dados = dados
         
+        # self.label_json_topo = QLabel()
+        # self.label_json_topo.setStyleSheet("font-size: 10px; color: #555;")
+        # self.label_json_topo.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
+        
         # JSON SEMPRE no caminho padrão por usuário
         caminho_json = Path(caminho_padrao_json(self.sigla))
         caminho_json_inicial = str(caminho_json)
+        
+        self.caminho_json = caminho_json
+        
+        self.atualizar_titulo_janela()
+        
+        # self.label_json_topo.setText(f"JSON: {caminho_json_inicial}")
+        # self.label_json_topo.setToolTip(caminho_json_inicial)
 
         if caminho_json.exists():
             # já existe JSON local: carrega e preenche (comportamento atual)
@@ -141,10 +150,15 @@ class TelaPrincipal(QWidget):
         layout_botoes.addWidget(self.btn_consultar)
         layout_botoes.addWidget(btn_exportar)
 
-        # Layout do topo
+        # # Layout do topo
+        # layout_topo = QHBoxLayout()
+        # layout_topo.addLayout(layout_botoes)
+        # layout_topo.addSpacing(20)
+        # layout_topo.addWidget(self.label_json_topo)
+        # layout_topo.addStretch()
+
         layout_topo = QHBoxLayout()
         layout_topo.addLayout(layout_botoes)
-        layout_topo.addStretch()
         layout_topo.addStretch()
 
         # Adiciona topo na aba principal
@@ -165,8 +179,8 @@ class TelaPrincipal(QWidget):
         layout_aba_nova.addWidget(label_em_branco)
 
         # Adiciona as abas no QTabWidget
-        self.tabs.addTab(aba_painel, "Painel")
-        self.tabs.addTab(aba_nova, "Nova Aba")
+        self.tabs.addTab(aba_painel, "Indisponibilidades")
+        self.tabs.addTab(aba_nova, "Capacidade")
 
         # Adiciona o QTabWidget na janela principal
         layout_principal.addWidget(self.tabs)
@@ -225,6 +239,10 @@ class TelaPrincipal(QWidget):
         # Atualiza o label do caminho em TODOS os calendários (pra refletir o local real)
         for cal in self.calendarios.values():
             cal.set_caminho_json(str(caminho_padrao_json(self.sigla)))
+            
+        
+        self.caminho_json = Path(caminho_padrao_json(self.sigla))
+        self.atualizar_titulo_janela()  
 
         return paths
 
@@ -549,6 +567,11 @@ class TelaPrincipal(QWidget):
             self.btn_consultar.setToolTip("Você está usando a versão mais recente")
 
     def atualizar_titulo_janela(self):
+        caminho_completo = str(self.caminho_json) if hasattr(self, "caminho_json") else "N/A"
+
         self.setWindowTitle(
-            f"PGD - Painel Gestão de Dados ({self.sigla}) - Versão Banco de Dados: {self.versao_atual}"
+            f"PGD - Painel Gestão de Dados ({self.sigla}) "
+            f"- Versão Banco de Dados: {self.versao_atual} "
+            f" || JSON: {caminho_completo}"
         )
+        

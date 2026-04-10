@@ -7,3 +7,4 @@ if __name__ == "__main__":
     login = TelaLogin()
     login.show()
     sys.exit(app.exec())
+    

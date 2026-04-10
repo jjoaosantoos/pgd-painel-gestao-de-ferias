@@ -103,8 +103,8 @@ class CalendarioAno(QWidget):
 
         # Para cada pas Texto/Cor -> Cria uma etiqueta
         for texto, cor, self.toolTip in [
-            ("* F - Férias", "green", "Importado automaticamente de outra plataforma. Não pode ser editado manualmente"),
-            ("* L - Licença Prêmio", "orange", "Importado automaticamente de outra plataforma. Não pode ser editado manualmente"),
+            ("* F - Férias", "green", "Importado automaticamente de outra plataforma. Não pode ser registrado manualmente"),
+            ("* L - Licença Prêmio", "orange", "Importado automaticamente de outra plataforma. Não pode ser registrado manualmente"),
             ("A - Abono", "lightBlue", None),
             ("T - Folga TRE", "thistle", None),
             ("R - Recesso", "red", None),
@@ -115,17 +115,19 @@ class CalendarioAno(QWidget):
         ]:
             manual_layout.addWidget(criar_label(texto, cor, self.toolTip))  # Adiciona no Layout
 
-        texto = (
-            self.caminho_json
-            if self.caminho_json
-            else "Não definido (clique em Salvar/Exportar)"
-        )
-        self.label_caminho_json = QLabel(f"Arquivo JSON: {texto}")
-        self.label_caminho_json.setStyleSheet("font-size: 9px; color: #555;")
+        self.label_lider = QLabel("Líder:")
+        self.label_lider.setStyleSheet("font-size: 13px; font-weight: bold;")
+        
+        self.combo_opcoes = QComboBox()
+        self.combo_opcoes.setFixedWidth(250)
+        self.combo_opcoes.setPlaceholderText("Líder de Equipe")
+
+        for lider in self.obter_lideres_equipe():
+            self.combo_opcoes.addItem(lider)
 
         # Criando campo de pesquisa
         pesquisa_layout = QHBoxLayout()
-        pesquisa_label = QLabel("Pesquisar:")   # <- FALTAVA ISSO
+        pesquisa_label = QLabel("Pesquisar:")  
         self.campo_pesquisa = QLineEdit()
         self.campo_pesquisa.setPlaceholderText("Digite um nome...")
         self.campo_pesquisa.textChanged.connect(self.filtrar_nomes)
@@ -302,7 +304,11 @@ class CalendarioAno(QWidget):
         # --- TOPO ESQUERDO (pesquisa)
         topo_esquerda = QVBoxLayout()
         topo_esquerda.setContentsMargins(0, 0, 0, 0)
-        topo_esquerda.addWidget(self.label_caminho_json)
+        layout_lider = QHBoxLayout()
+        layout_lider.addWidget(self.label_lider)
+        layout_lider.addWidget(self.combo_opcoes)
+        layout_lider.addStretch()
+        topo_esquerda.addLayout(layout_lider)
         topo_esquerda.addLayout(pesquisa_layout)
 
         topo_esquerda_container = QWidget()
@@ -391,7 +397,6 @@ class CalendarioAno(QWidget):
                 break
 
     def atualizar_totais_colunas(self):
-        """Mostra o total dentro do item do dia da semana: 'Sáb\\n(2)'."""
         if not hasattr(self, "tabela") or self.tabela is None:
             return
         if not hasattr(self, "item_sem_por_col"):
@@ -413,6 +418,7 @@ class CalendarioAno(QWidget):
             base = dias_semana_pt[dia_sem]
 
             item_sem.setText(f"{base}\n({total})" if total > 0 else base)
+            item_sem.setToolTip(f"Total de ausências no dia: {total}")
 
     def sincronizar_scroll(self):
         try:
@@ -444,6 +450,8 @@ class CalendarioAno(QWidget):
         from PyQt6.QtWidgets import QTableWidget, QTableWidgetItem
         from PyQt6.QtGui import QFont
         from PyQt6.QtCore import Qt
+        
+        hoje = datetime.now()
 
         # Limpa cabeçalho antigo
         for i in reversed(range(self.cabecalho_layout.count())):
@@ -495,15 +503,32 @@ class CalendarioAno(QWidget):
                 item_sem.setTextAlignment(
                     Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignVCenter
                 )
+                
+                if self.ano == hoje.year and mes == hoje.month and dia == hoje.day:
+                    item_sem.setForeground(QColor("#1976D2"))
+                    item_sem.setToolTip("Hoje")
 
                 tabela.setItem(1, col, item_sem)
                 self.item_sem_por_col[col] = item_sem
 
                 item_dia = QTableWidgetItem(str(dia))
                 item_dia.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+
                 fonte = QFont("Arial", 8)
                 fonte.setBold(True)
+
+                # 👇 pega data atual
+                hoje = datetime.now()
+
+                # 👇 se for o dia atual
+                if self.ano == hoje.year and mes == hoje.month and dia == hoje.day:
+                    fonte.setBold(True)
+                    fonte.setPointSize(10)  # deixa maior
+                    item_dia.setForeground(QColor("#1976D2"))  # verde elegante
+                    item_dia.setToolTip("Hoje")
+
                 item_dia.setFont(fonte)
+
                 tabela.setItem(2, col, item_dia)
 
                 col += 1
@@ -825,7 +850,24 @@ class CalendarioAno(QWidget):
 
         self.sincronizar_scroll()
         self.atualizar_totais_colunas()
+        
+    def obter_lideres_equipe(self) -> list[str]:
+        lideres = []
+        vistos = set()
 
+        for pessoa in self.dados:
+            nome = (pessoa.get("nome") or "").strip()
+            matricula = str(pessoa.get("matricula") or "").strip()
+            funcao = (pessoa.get("funcao") or "").strip().upper()
+
+            nome_completo = f"{nome} ({matricula})"
+
+            if "LIDER DE EQUIPE" in funcao and nome_completo not in vistos:
+                lideres.append(nome_completo)
+                vistos.add(nome_completo)
+
+        return lideres
+    
     def filtrar_nomes(self, texto=""):
         texto = (texto or "").strip().lower()
 
@@ -873,9 +915,5 @@ class CalendarioAno(QWidget):
     
     def set_caminho_json(self, caminho_json: str | Path):
         self.caminho_json = str(caminho_json)
-        if hasattr(self, "label_caminho_json"):
-            self.label_caminho_json.setText(f"Arquivo JSON: {self.caminho_json}")
-
-            self.label_caminho_json.setToolTip(self.caminho_json)  # caminho completo no hover
 
 
