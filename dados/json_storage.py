@@ -32,9 +32,19 @@ def carregar_dados(sigla: str):
 
     try:
         with open(arquivo, "r", encoding="utf-8") as f:
-            return json.load(f)
+            dados = json.load(f)
+        
+        if "feriados" not in dados:
+            dados["feriados"] = []
+            
+        return dados
+    
     except (FileNotFoundError, json.JSONDecodeError):
-        return {"versao": None, "sigla": sigla, "dados": []}
+        return {"versao": None, 
+                "sigla": sigla, 
+                "dados": [], 
+                "feriados": []
+                }
 
 
 def salvar_dados(dados: dict, sigla: str):

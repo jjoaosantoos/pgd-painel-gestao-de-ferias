@@ -517,10 +517,10 @@ class CalendarioAno(QWidget):
                 fonte = QFont("Arial", 8)
                 fonte.setBold(True)
 
-                # 👇 pega data atual
+                #  pega data atual
                 hoje = datetime.now()
 
-                # 👇 se for o dia atual
+                # se for o dia atual
                 if self.ano == hoje.year and mes == hoje.month and dia == hoje.day:
                     fonte.setBold(True)
                     fonte.setPointSize(10)  # deixa maior
