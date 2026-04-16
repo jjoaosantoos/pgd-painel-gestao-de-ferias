@@ -58,5 +58,35 @@ def salvar_dados(dados: dict, sigla: str):
     os.replace(tmp, arquivo)
 
 
+def cadastrar_feriado(sigla: str, dia: int, mes: int, ano: int, tipo: str, uf: str | None):
+    dados = carregar_dados(sigla)
+    
+    novo_feriado = {
+        "dia": dia,
+        "mes": mes,
+        "ano": ano,
+        "tipo": tipo,
+        "uf": uf,
+    }
+    
+    dados["feriados"].append(novo_feriado)
+    salvar_dados(dados, sigla)
+    
+def remover_feriado(sigla: str, dia: int, mes: int, ano: int, tipo: str, uf: str | None):
+    dados = carregar_dados(sigla)
+
+    dados["feriados"] = [
+        f for f in dados["feriados"]
+        if not (
+            f.get("dia") == dia and
+            f.get("mes") == mes and
+            f.get("ano") == ano and
+            f.get("tipo") == tipo and
+            f.get("uf") == uf
+        )
+    ]
+
+    salvar_dados(dados, sigla)
+
 def caminho_padrao_json(sigla: str) -> Path:
     return _arquivo_por_sigla(sigla)

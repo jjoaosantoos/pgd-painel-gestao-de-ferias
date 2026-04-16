@@ -18,7 +18,7 @@ from PyQt6.QtGui import QFont, QColor
 from PyQt6.QtWidgets import QAbstractItemView
 
 from pathlib import Path
-
+from dados.json_storage import carregar_dados
 
 class CalendarioAno(QWidget):
     """Cria uma aba com o calendário de um determinado ano (opção A: grade única)"""
@@ -369,6 +369,39 @@ class CalendarioAno(QWidget):
 
     # ------------------- Funções -------------------
     dados_alterados = pyqtSignal(list)
+    
+    def obter_feriados(self) -> list[dict]:
+        dados_json = carregar_dados(self.sigla)
+        return dados_json.get("feriados", [])
+
+    def pessoa_pertence_ao_feriado_local(self, pessoa, uf_feriado):
+        uf_pessoa = (pessoa.get("uf") or "").strip().upper()
+        return uf_pessoa == (uf_feriado or "").strip().upper()
+
+    def obter_tipo_feriado_para_pessoa(self, pessoa, mes, dia):
+        feriados = self.obter_feriados()
+
+        for feriado in feriados:
+            if feriado.get("ano") != self.ano:
+                continue
+
+            if feriado.get("mes") != mes:
+                continue
+
+            if feriado.get("dia") != dia:
+                continue
+
+            tipo = (feriado.get("tipo") or "").strip().lower()
+
+            if tipo == "nacional":
+                return "nacional"
+
+            if tipo == "local":
+                uf_feriado = feriado.get("uf")
+                if self.pessoa_pertence_ao_feriado_local(pessoa, uf_feriado):
+                    return "local"
+
+        return None
 
     def contar_ausencias_no_dia(self, mes, dia):
         return sum(
@@ -597,7 +630,7 @@ class CalendarioAno(QWidget):
         self.celulas.clear()
 
         for row_index, pessoa in enumerate(self.dados):
-
+            print(pessoa.get("nome"), "| UF:", pessoa.get("uf"))
             nome_completo = (
                 f"{pessoa.get('nome','Vazio')} ({pessoa.get('matricula','Vazio')})"
             )
@@ -606,11 +639,32 @@ class CalendarioAno(QWidget):
 
             for c_index, (mes, dia) in enumerate(self.col_map):
                 dia_sem = calendar.weekday(self.ano, mes, dia)
-                cor_base = "lightgray" if dia_sem >= 5 else "white"
+                tipo_feriado = self.obter_tipo_feriado_para_pessoa(pessoa, mes, dia)
+
+                if tipo_feriado == "nacional":
+                    cor_base = "#5f5f5f"
+                elif tipo_feriado == "local":
+                    cor_base = "#8a8a8a"
+                elif dia_sem >= 5:
+                    cor_base = "lightgray"
+                else:
+                    cor_base = "white"
+
                 entrada = QLineEdit()
                 entrada.setFixedSize(30, 30)
                 entrada.setAlignment(Qt.AlignmentFlag.AlignCenter)
                 entrada.setMaxLength(1)
+
+                # TOOLTIP
+                if tipo_feriado == "nacional":
+                    entrada.setToolTip("Feriado Nacional")
+                elif tipo_feriado == "local":
+                    uf_feriado = next(
+                        (f.get("uf") for f in self.obter_feriados()
+                        if f.get("mes") == mes and f.get("dia") == dia and f.get("ano") == self.ano),
+                        ""
+                    )
+                    entrada.setToolTip(f"Feriado Local - {uf_feriado}")
                 entrada.setStyleSheet(
                     f"border:1px solid black; background-color:{cor_base};"
                 )
@@ -823,6 +877,7 @@ class CalendarioAno(QWidget):
         # --- RECRIAR OS MAPEAMENTOS (linhas_por_nome e row_por_nome) ---
         self.linhas_por_nome.clear()
         for row_index, pessoa in enumerate(self.dados):
+            
             nome_completo = (
                 f"{pessoa.get('nome','Vazio')} ({pessoa.get('matricula','Vazio')})"
             )
@@ -831,6 +886,7 @@ class CalendarioAno(QWidget):
                 widget = self.tabela.cellWidget(row_index, col)
                 if widget:
                     self.linhas_por_nome[nome_completo].append(widget)
+                    
 
         # --- RECRIAR A TABELA DE NOMES COM OFFSET ---
         self.table_nomes.clearContents()

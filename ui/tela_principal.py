@@ -7,16 +7,22 @@ from PyQt6.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QApplication,
-    QTabWidget
+    QTabWidget,
+    QDialog,
+    QLineEdit,
+    QComboBox,
+    QFormLayout,
+    QSizePolicy,
 )
 from PyQt6.QtCore import Qt, QTimer
 
 from ui.calendario_ano import CalendarioAno
-from dados.json_storage import carregar_dados, salvar_dados, caminho_padrao_json
+from dados.json_storage import carregar_dados, salvar_dados, caminho_padrao_json, cadastrar_feriado
 
 from dados.db_repository import salvar_nova_versao, buscar_dados_atuais
 from utils.export_csv import exportar_calendario_csv
 
+from PyQt6.QtGui import QIntValidator
 
 from pathlib import Path
 
@@ -150,12 +156,10 @@ class TelaPrincipal(QWidget):
         layout_botoes.addWidget(self.btn_consultar)
         layout_botoes.addWidget(btn_exportar)
 
-        # # Layout do topo
-        # layout_topo = QHBoxLayout()
-        # layout_topo.addLayout(layout_botoes)
-        # layout_topo.addSpacing(20)
-        # layout_topo.addWidget(self.label_json_topo)
-        # layout_topo.addStretch()
+        btn_feriados = QPushButton("Feriados")
+        layout_botoes.addWidget(btn_feriados)
+        btn_feriados.clicked.connect(self.abrir_tela_feriados)
+
 
         layout_topo = QHBoxLayout()
         layout_topo.addLayout(layout_botoes)
@@ -245,6 +249,122 @@ class TelaPrincipal(QWidget):
         self.atualizar_titulo_janela()  
 
         return paths
+    
+    def abrir_tela_feriados(self):
+        dialog = QDialog(self)
+        dialog.setWindowTitle("Cadastro de Feriados")
+        dialog.setModal(True)
+        dialog.resize(420, 280)
+
+        layout_principal = QVBoxLayout(dialog)
+        layout_principal.setContentsMargins(20, 20, 20, 20)
+        layout_principal.setSpacing(14)
+
+        label_titulo = QLabel("Cadastrar Feriado")
+        label_titulo.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        label_titulo.setStyleSheet("""
+            font-size: 20px;
+            font-weight: bold;
+            margin-bottom: 8px;
+        """)
+        layout_principal.addWidget(label_titulo)
+
+        form_layout = QFormLayout()
+        form_layout.setLabelAlignment(Qt.AlignmentFlag.AlignRight)
+        form_layout.setFormAlignment(Qt.AlignmentFlag.AlignHCenter)
+        form_layout.setHorizontalSpacing(12)
+        form_layout.setVerticalSpacing(12)
+
+        input_dia = QLineEdit()
+        input_dia.setFixedWidth(90)
+        input_dia.setFixedHeight(32)
+        input_dia.setMaxLength(2)
+        input_dia.setPlaceholderText("Ex: 7")
+        input_dia.setValidator(QIntValidator(1, 31))
+
+        combo_mes = QComboBox()
+        combo_mes.setFixedWidth(180)
+        combo_mes.setFixedHeight(32)
+        combo_mes.addItems([
+            "Janeiro", "Fevereiro", "Março", "Abril",
+            "Maio", "Junho", "Julho", "Agosto",
+            "Setembro", "Outubro", "Novembro", "Dezembro"
+        ])
+
+        input_ano = QLineEdit()
+        input_ano.setFixedWidth(120)
+        input_ano.setFixedHeight(32)
+        input_ano.setMaxLength(4)
+        input_ano.setPlaceholderText("Ex: 2026")
+        input_ano.setValidator(QIntValidator(1900, 2100))
+
+        combo_tipo = QComboBox()
+        combo_tipo.setFixedWidth(180)
+        combo_tipo.setFixedHeight(32)
+        combo_tipo.addItems(["nacional", "local"])
+
+        combo_uf = QComboBox()
+        combo_uf.setFixedWidth(180)
+        combo_uf.setFixedHeight(32)
+        combo_uf.addItems(["SC", "PB", "RN", "RJ", "DF", "CE"])
+        combo_uf.setEnabled(False)
+
+        form_layout.addRow("Dia:", input_dia)
+        form_layout.addRow("Mês:", combo_mes)
+        form_layout.addRow("Ano:", input_ano)
+        form_layout.addRow("Tipo:", combo_tipo)
+        form_layout.addRow("UF:", combo_uf)
+
+        layout_principal.addLayout(form_layout)
+
+        def alternar_uf():
+            combo_uf.setEnabled(combo_tipo.currentText() == "local")
+
+        combo_tipo.currentIndexChanged.connect(alternar_uf)
+
+        btn_cadastrar = QPushButton("Cadastrar")
+        btn_cadastrar.setFixedHeight(36)
+        btn_cadastrar.setMinimumWidth(180)
+        btn_cadastrar.setStyleSheet("""
+            QPushButton {
+                font-weight: bold;
+                padding: 6px 12px;
+            }
+        """)
+
+        layout_botao = QHBoxLayout()
+        layout_botao.addStretch()
+        layout_botao.addWidget(btn_cadastrar)
+        layout_botao.addStretch()
+
+        layout_principal.addLayout(layout_botao)
+
+        def salvar_feriado():
+            try:
+                dia = int(input_dia.text())
+                mes = combo_mes.currentIndex() + 1
+                ano = int(input_ano.text())
+                tipo = combo_tipo.currentText()
+
+                if tipo == "local":
+                    uf = combo_uf.currentText()
+                else:
+                    uf = None
+
+                cadastrar_feriado(self.sigla, dia, mes, ano, tipo, uf)
+
+                for calendario in self.calendarios.values():
+                    calendario.atualizar_dados(self.dados_salvos)
+
+                QMessageBox.information(dialog, "Sucesso", "Feriado cadastrado com sucesso!")
+                dialog.accept()
+
+            except ValueError:
+                QMessageBox.warning(dialog, "Erro", "Dia e ano devem ser números válidos.")
+
+        btn_cadastrar.clicked.connect(salvar_feriado)
+
+        dialog.exec()
 
     def on_salvar_click(self):
         if not self.dados_salvos:
